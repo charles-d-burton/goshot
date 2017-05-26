@@ -23,7 +23,7 @@ func main() {
 
 	r.GET("/shot", func(c *gin.Context) {
 		cameraFilePath, err := camera.TriggerCaptureToFile()
-		if err > 0 {
+		if err == 0 {
 			cameraFileReader := camera.FileReader(cameraFilePath.Folder, cameraFilePath.Name)
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(cameraFileReader)
