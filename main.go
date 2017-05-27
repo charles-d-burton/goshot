@@ -22,14 +22,20 @@ func main() {
 	})
 
 	r.GET("/shot", func(c *gin.Context) {
+		camera.Interrupt()
 		cameraFilePath, err := camera.TriggerCaptureToFile()
 		if err == 0 {
+
 			cameraFileReader := camera.FileReader(cameraFilePath.Folder, cameraFilePath.Name)
+			defer cameraFileReader.Close()
 			buf := new(bytes.Buffer)
 			buf.ReadFrom(cameraFileReader)
+			camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
 
 			c.Data(200, "image/jpeg", buf.Bytes())
+
 		}
+		log.Println(gphoto2go.CameraResultToString(err))
 	})
 	r.Run()
 }
