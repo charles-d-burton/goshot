@@ -37,9 +37,9 @@ func main() {
 			cameraFileReader := camera.FileReader(cameraFilePath.Folder, cameraFilePath.Name)
 			defer cameraFileReader.Close()
 			buf := new(bytes.Buffer)
-			buf.WriteString("\"")
+			//buf.WriteString("\"")
 			buf.ReadFrom(cameraFileReader)
-			buf.WriteString("\"")
+			//buf.WriteString("\"")
 			camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
 			encodedImage := base64.StdEncoding.EncodeToString(buf.Bytes())
 			c.JSON(200, gin.H{
