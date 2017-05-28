@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"log"
+	"net/http"
+
+	"goshot/utility"
+
+	"errors"
 
 	"github.com/charles-d-burton/gphoto2go"
 	"github.com/gin-gonic/gin"
-	"goshot/utility"
 )
 
 func main() {
@@ -43,8 +47,13 @@ func main() {
 			})
 			//c.Data(200, "image/jpeg", buf.Bytes())
 
+		} else {
+			log.Println(gphoto2go.CameraResultToString(err))
+			c.Error(errors.New(gphoto2go.CameraResultToString(err)))
+			c.JSON(http.StatusInternalServerError, gphoto2go.CameraResultToString(err))
+			return
 		}
-		log.Println(gphoto2go.CameraResultToString(err))
+
 	})
 	r.Run()
 }
