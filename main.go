@@ -45,6 +45,7 @@ func main() {
 			c.JSON(200, gin.H{
 				"image": encodedImage,
 			})
+			buf.Reset()
 			//c.Data(200, "image/jpeg", buf.Bytes())
 
 		} else {
