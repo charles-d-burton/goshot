@@ -40,16 +40,20 @@ func main() {
 			defer cameraFileReader.Close()
 			buf := new(bytes.Buffer)
 			defer buf.Reset()
-			len, err := buf.ReadFrom(cameraFileReader)
+			_, err := buf.ReadFrom(cameraFileReader)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": err.Error(),
 				})
 			}
-			if len > 3000000 { //Check that we have some actual image data
+			if http.DetectContentType(buf.Bytes()) == "image/jpeg" { //Check that we have some actual image data
 				encodedImage := base64.StdEncoding.EncodeToString(buf.Bytes())
 				c.JSON(200, gin.H{
 					"image": encodedImage,
+				})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Unkown File type",
 				})
 			}
 			camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
