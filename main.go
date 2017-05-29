@@ -17,11 +17,7 @@ import (
 func main() {
 	mdnsServer := utility.BroadcastServer()
 	defer mdnsServer.Shutdown()
-	camera := new(gphoto2go.Camera)
-	err := camera.Init()
-	if err > 0 {
-		log.Println(err)
-	}
+
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -30,6 +26,15 @@ func main() {
 	})
 
 	r.GET("/shot", func(c *gin.Context) {
+		camera := new(gphoto2go.Camera)
+		err := camera.Init()
+		defer camera.Exit()
+		if err > 0 {
+			log.Println(gphoto2go.CameraResultToString(err))
+			c.JSON(500, gin.H{
+				"err": gphoto2go.CameraResultToString(err),
+			})
+		}
 		//camera.Interrupt()
 		cameraFilePath, err := camera.TriggerCaptureToFile()
 		if err == 0 {
