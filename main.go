@@ -15,24 +15,21 @@ import (
 )
 
 func main() {
+	//Broadcast where the service is
 	mdnsServer := utility.BroadcastServer()
 	defer mdnsServer.Shutdown()
 
 	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
 
+	//Capture an image and return the base64 encoded value
 	r.GET("/shot", func(c *gin.Context) {
 		camera := new(gphoto2go.Camera)
 		err := camera.Init()
-		defer camera.Exit()
+		defer camera.Exit() //Make sure to exit the camera at the end
 		if err > 0 {
 			log.Println(gphoto2go.CameraResultToString(err))
 			c.JSON(500, gin.H{
-				"err": gphoto2go.CameraResultToString(err),
+				"error": gphoto2go.CameraResultToString(err),
 			})
 		}
 		//camera.Interrupt()
@@ -42,20 +39,29 @@ func main() {
 			cameraFileReader := camera.FileReader(cameraFilePath.Folder, cameraFilePath.Name)
 			defer cameraFileReader.Close()
 			buf := new(bytes.Buffer)
-			buf.ReadFrom(cameraFileReader)
+			defer buf.Reset()
+			len, err := buf.ReadFrom(cameraFileReader)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": err.Error(),
+				})
+			}
+			if len > 3000000 { //Check that we have some actual image data
+				encodedImage := base64.StdEncoding.EncodeToString(buf.Bytes())
+				c.JSON(200, gin.H{
+					"image": encodedImage,
+				})
+			}
+			camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
 
-			//camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
-			encodedImage := base64.StdEncoding.EncodeToString(buf.Bytes())
-			c.JSON(200, gin.H{
-				"image": encodedImage,
-			})
-			buf.Reset()
 			//c.Data(200, "image/jpeg", buf.Bytes())
 
 		} else {
 			log.Println(gphoto2go.CameraResultToString(err))
 			c.Error(errors.New(gphoto2go.CameraResultToString(err)))
-			c.JSON(http.StatusInternalServerError, gphoto2go.CameraResultToString(err))
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": gphoto2go.CameraResultToString(err),
+			})
 			return
 		}
 
