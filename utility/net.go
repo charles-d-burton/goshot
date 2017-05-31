@@ -1,20 +1,17 @@
 package utility
 
 import (
-	"github.com/hashicorp/mdns"
 	"net"
 	"os"
+
+	"github.com/hashicorp/mdns"
 )
 
-func BroadcastServer() *mdns.Server {
+func BroadcastServer(port int) *mdns.Server {
 	host, _ := os.Hostname()
-	/*listener, err := net.Listen("tcp", "0.0.0.0:0")
-	if err != nil {
-		panic(err)
-	}*/
 	//port := listener.Addr().(*net.TCPAddr).Port
 	info := []string{"Remote Camera Service"}
-	service, _ := mdns.NewMDNSService(host, "_goshot._tcp", "", "", 8080, getLocalIPS(), info)
+	service, _ := mdns.NewMDNSService(host, "_goshot._tcp", "", "", port, getLocalIPS(), info)
 
 	// Create the mDNS server, defer shutdown
 	server, _ := mdns.NewServer(&mdns.Config{Zone: service})
