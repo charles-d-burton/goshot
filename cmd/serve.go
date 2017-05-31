@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/charles-d-burton/gphoto2go"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,7 @@ import (
 var (
 	serverPort      int
 	serverInterface string
+	mutex           = &sync.Mutex{}
 )
 
 // serveCmd represents the serve command
@@ -68,6 +70,8 @@ func serve() {
 
 	//Capture an image and return the base64 encoded value
 	r.GET("/shot", func(c *gin.Context) {
+		mutex.Lock()
+		defer mutex.Unlock()
 		camera := new(gphoto2go.Camera)
 		err := camera.Init()
 		defer camera.Exit() //Make sure to exit the camera at the end
