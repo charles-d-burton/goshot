@@ -3,7 +3,7 @@ package main
 import (
 	"runtime"
 
-	"github.com/charles-d-burton/goshot/cmd"
+	"goshot/cmd"
 )
 
 func main() {
