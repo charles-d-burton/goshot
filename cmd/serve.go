@@ -75,6 +75,7 @@ func serve() {
 
 }
 
+//Return a Base64 encoded JSON object containing the picture
 func getShotJSON(c *gin.Context) {
 
 	data, err := snapPicture()
@@ -96,6 +97,7 @@ func getShotJSON(c *gin.Context) {
 	}
 }
 
+//Return a raw JPEG instead of Base64 encoded JSON doc
 func getRawShot(c *gin.Context) {
 	data, err := snapPicture()
 	if err != nil {
