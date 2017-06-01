@@ -69,56 +69,73 @@ func serve() {
 	r := gin.Default()
 
 	//Capture an image and return the base64 encoded value
-	r.GET("/shot", func(c *gin.Context) {
-		mutex.Lock()
-		defer mutex.Unlock()
-		camera := new(gphoto2go.Camera)
-		err := camera.Init()
-		defer camera.Exit() //Make sure to exit the camera at the end
-		if err > 0 {
-			log.Println(gphoto2go.CameraResultToString(err))
-			c.JSON(500, gin.H{
-				"error": gphoto2go.CameraResultToString(err),
-			})
-		}
-		//camera.Interrupt()
-		cameraFilePath, err := camera.TriggerCaptureToFile()
-		if err == 0 {
-
-			cameraFileReader := camera.FileReader(cameraFilePath.Folder, cameraFilePath.Name)
-			defer cameraFileReader.Close()
-			buf := new(bytes.Buffer)
-			defer buf.Reset()
-			_, err := buf.ReadFrom(cameraFileReader)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": err.Error(),
-				})
-			}
-			if http.DetectContentType(buf.Bytes()) == "image/jpeg" { //Check that we have some actual image data
-				encodedImage := base64.StdEncoding.EncodeToString(buf.Bytes())
-				c.JSON(200, gin.H{
-					"image": encodedImage,
-				})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": "Unkown File type",
-				})
-			}
-			camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
-
-			//c.Data(200, "image/jpeg", buf.Bytes())
-
-		} else {
-			log.Println(gphoto2go.CameraResultToString(err))
-			c.Error(errors.New(gphoto2go.CameraResultToString(err)))
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": gphoto2go.CameraResultToString(err),
-			})
-			return
-		}
-
-	})
+	r.GET("/shot", getShotJSON)
+	r.GET("/rawshot", getRawShot)
 	r.Run(":" + strconv.Itoa(serverPort))
 
+}
+
+func getShotJSON(c *gin.Context) {
+
+	data, err := snapPicture()
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+	}
+	if http.DetectContentType(data) == "image/jpeg" { //Check that we have some actual image data
+		encodedImage := base64.StdEncoding.EncodeToString(data)
+		c.JSON(200, gin.H{
+			"image": encodedImage,
+		})
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unkown File type",
+		})
+	}
+}
+
+func getRawShot(c *gin.Context) {
+	data, err := snapPicture()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+	}
+	if http.DetectContentType(data) == "image/jpeg" { //Check that we have some actual image data
+		c.Data(200, "image/jpeg", data)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Unkown File type",
+		})
+	}
+}
+
+/*
+ * Interface with the camera and have it take a picture
+ * return that photo as a byte array.
+ */
+func snapPicture() ([]byte, error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	camera := new(gphoto2go.Camera)
+	err := camera.Init()
+	defer camera.Exit() //Make sure to exit the camera at the end
+
+	cameraFilePath, err := camera.TriggerCaptureToFile()
+	if err == 0 {
+		defer camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
+		cameraFileReader := camera.FileReader(cameraFilePath.Folder, cameraFilePath.Name)
+		defer cameraFileReader.Close()
+		buf := new(bytes.Buffer)
+		defer buf.Reset()
+		_, err := buf.ReadFrom(cameraFileReader)
+		if err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
+	}
+	log.Println(gphoto2go.CameraResultToString(err))
+	return nil, errors.New(gphoto2go.CameraResultToString(err))
 }
