@@ -1,0 +1,13 @@
+[Unit]
+Description=Goshot camera service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/home/pi/goshot serve --port=8080
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
