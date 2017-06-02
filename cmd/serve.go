@@ -14,10 +14,13 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"errors"
 	"goshot/utility"
+	"image"
+	"image/jpeg"
 	"log"
 	"net/http"
 	"strconv"
@@ -32,6 +35,7 @@ import (
 var (
 	serverPort      int
 	serverInterface string
+	quality         int
 	mutex           = &sync.Mutex{}
 )
 
@@ -51,6 +55,7 @@ func init() {
 	RootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().IntVarP(&serverPort, "port", "p", 8080, "port on which the server will listen")
 	serveCmd.Flags().StringVarP(&serverInterface, "bind", "", "127.0.0.1", "interface to which the server will bind")
+	serveCmd.Flags().IntVarP(&quality, "quality", "q", 100, "quality of the returned JPEG image")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
@@ -86,7 +91,11 @@ func getShotJSON(c *gin.Context) {
 		})
 	}
 	if http.DetectContentType(data) == "image/jpeg" { //Check that we have some actual image data
-		encodedImage := base64.StdEncoding.EncodeToString(data)
+		imgData := data
+		if quality < 100 {
+			imgData, _ = convertJPEG(data)
+		}
+		encodedImage := base64.StdEncoding.EncodeToString(imgData)
 		c.JSON(200, gin.H{
 			"image": encodedImage,
 		})
@@ -140,4 +149,27 @@ func snapPicture() ([]byte, error) {
 	}
 	log.Println(gphoto2go.CameraResultToString(err))
 	return nil, errors.New(gphoto2go.CameraResultToString(err))
+}
+
+/*
+ * Convert image quality of JPEG
+ */
+
+func convertJPEG(imgByte []byte) ([]byte, error) {
+	img, _, err := image.Decode(bytes.NewReader(imgByte))
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	var opt jpeg.Options
+	opt.Quality = 90
+	var b bytes.Buffer
+	writer := bufio.NewWriter(&b)
+	err = jpeg.Encode(writer, img, &opt)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return b.Bytes(), nil
+
 }
