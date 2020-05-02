@@ -17,8 +17,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/base64"
-	"errors"
-	"goshot/utility"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"log"
@@ -27,7 +26,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charles-d-burton/gphoto2go"
+	"github.com/charles-d-burton/goshot/v2/utility"
+	"github.com/dhowden/raspicam"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 )
@@ -128,27 +128,21 @@ func getRawShot(c *gin.Context) {
  * return that photo as a byte array.
  */
 func snapPicture() ([]byte, error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	camera := new(gphoto2go.Camera)
-	err := camera.Init()
-	defer camera.Exit() //Make sure to exit the camera at the end
-
-	cameraFilePath, err := camera.TriggerCaptureToFile()
-	if err == 0 {
-		defer camera.DeleteFile(cameraFilePath.Folder, cameraFilePath.Name)
-		cameraFileReader := camera.FileReader(cameraFilePath.Folder, cameraFilePath.Name)
-		defer cameraFileReader.Close()
-		buf := new(bytes.Buffer)
-		defer buf.Reset()
-		_, err := buf.ReadFrom(cameraFileReader)
-		if err != nil {
-			return nil, err
+	var b bytes.Buffer
+	wr := bufio.NewWriter(&b)
+	s := raspicam.NewStill()
+	errCh := make(chan error)
+	go func() {
+		for x := range errCh {
+			log.Println(x)
 		}
-		return buf.Bytes(), nil
+	}()
+	log.Println("Capturing image...")
+	raspicam.Capture(s, wr, errCh)
+	if len(b.Bytes()) != 0 {
+		return b.Bytes(), nil
 	}
-	log.Println(gphoto2go.CameraResultToString(err))
-	return nil, errors.New(gphoto2go.CameraResultToString(err))
+	return nil, fmt.Errorf("Could not capture imate")
 }
 
 /*
