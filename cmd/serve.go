@@ -26,7 +26,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/charles-d-burton/goshot/v2/utility"
+	"github.com/charles-d-burton/goshot/utility"
 	"github.com/dhowden/raspicam"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
